@@ -28,7 +28,37 @@ func addRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/", roothandler)
 }
 
-func AppHandler() http.Handler {
+type Child struct {
+	Name string
+}
+
+type ChildStore interface {
+	GetAllChildren() []Child
+}
+
+type InMemoryChildStore struct {
+	data map[string]Child
+}
+
+func NewInMemoryChildStore() *InMemoryChildStore {
+	return &InMemoryChildStore{
+		data: make(map[string]Child),
+	}
+}
+
+func (s *InMemoryChildStore) GetAllChildren() []Child {
+	children := make([]Child, 0, len(s.data))
+
+	for _, v := range s.data {
+		children = append(children, v)
+	}
+	return children
+}
+func (s *InMemoryChildStore) AddChild(name string) {
+	s.data[name] = Child{Name: name}
+}
+
+func AppHandler(childStore ChildStore) http.Handler {
 	mux := http.NewServeMux()
 	addRoutes(mux)
 
@@ -39,7 +69,8 @@ func AppHandler() http.Handler {
 func Run(config *Config) error {
 	log.Info("starting server", "port", config.Port)
 
-	handler := AppHandler()
+	store := NewInMemoryChildStore()
+	handler := AppHandler(store)
 	httpServer := &http.Server{
 		Addr:    net.JoinHostPort("localhost", strconv.Itoa(config.Port)),
 		Handler: handler,

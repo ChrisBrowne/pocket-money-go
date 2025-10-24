@@ -9,7 +9,10 @@ import (
 )
 
 func TestApi(t *testing.T) {
-	server := httptest.NewServer(server.AppHandler())
+	store := server.NewInMemoryChildStore()
+	store.AddChild("elizabeth")
+
+	server := httptest.NewServer(server.AppHandler(store))
 	defer server.Close()
 
 	resp, err := http.Get(server.URL)
@@ -29,7 +32,7 @@ func TestApi(t *testing.T) {
 		t.Errorf("Expexted status code %d, got %d", http.StatusOK, resp.StatusCode)
 	}
 
-	expected := "Pocket money, golang edition, mooo"
+	expected := "this should contian elizabeth!!!"
 	if string(body) != expected {
 		t.Errorf("Expected response body %q, got %q", expected, string(body))
 	}
