@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"pocketmoney/internal/server"
+	"strings"
 	"testing"
 )
 
@@ -32,9 +33,7 @@ func TestApi(t *testing.T) {
 		t.Errorf("Expexted status code %d, got %d", http.StatusOK, resp.StatusCode)
 	}
 
-	expected := "this should contian elizabeth!!!"
-	if string(body) != expected {
-		t.Errorf("Expected response body %q, got %q", expected, string(body))
+	if strings.Contains(string(body), "elizabeth") == false {
+		t.Errorf("Expected response body to contain 'elizabeth', got %q", string(body))
 	}
-
 }

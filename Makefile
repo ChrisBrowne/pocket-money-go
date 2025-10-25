@@ -1,7 +1,7 @@
 default: build
 
 clean:
-	rm -r ./bin
+	rm -rf ./bin
 
 build: clean
 	go build -o bin/pocketmoney ./cmd

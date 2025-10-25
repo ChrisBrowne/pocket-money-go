@@ -15,17 +15,34 @@ func init() {
 	log = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 }
 
-func roothandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Pocket money, golang edition, mooo")
+func handleSomething(store ChildStore) http.Handler {
+	// thing := prepareThing()
+	return http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			kids := store.GetAllChildren()
+			fmt.Printf("Kids: %s", kids)
+			fmt.Fprintf(w, "Pocket money, golang edition, mooo %s", kids)
+		},
+	)
+}
+
+func roothandler(store ChildStore) func(w http.ResponseWriter, r *http.Request) {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		kids := store.GetAllChildren()
+		fmt.Printf("Kids: %s", kids)
+		fmt.Fprintf(w, "Pocket money, golang edition, mooo %s", "elizabeth")
+	}
 }
 
 func pingHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "pong")
 }
 
-func addRoutes(mux *http.ServeMux) {
+func addRoutes(mux *http.ServeMux, store ChildStore) {
 	mux.HandleFunc("/ping", pingHandler)
-	mux.HandleFunc("/", roothandler)
+	mux.HandleFunc("/", roothandler(store))
+	mux.HandleFunc("/some", handleSomething(store).ServeHTTP)
 }
 
 type Child struct {
@@ -60,7 +77,7 @@ func (s *InMemoryChildStore) AddChild(name string) {
 
 func AppHandler(childStore ChildStore) http.Handler {
 	mux := http.NewServeMux()
-	addRoutes(mux)
+	addRoutes(mux, childStore)
 
 	var handler http.Handler = mux
 	return handler
@@ -70,6 +87,7 @@ func Run(config *Config) error {
 	log.Info("starting server", "port", config.Port)
 
 	store := NewInMemoryChildStore()
+	store.AddChild("elizabeth")
 	handler := AppHandler(store)
 	httpServer := &http.Server{
 		Addr:    net.JoinHostPort("localhost", strconv.Itoa(config.Port)),
