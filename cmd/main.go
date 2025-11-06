@@ -20,7 +20,8 @@ func constructConfig(getenvvar func(string) string) *server.Config {
 }
 
 func main() {
-	if err := server.Run(constructConfig(os.Getenv)); err != nil {
+	config := constructConfig(os.Getenv)
+	if err := server.Run(config); err != nil {
 		log.Error("run returned an error", "error", err)
 		os.Exit(1)
 	}

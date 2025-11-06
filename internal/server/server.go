@@ -83,6 +83,40 @@ func AppHandler(childStore ChildStore) http.Handler {
 	return handler
 }
 
+type PocketMoneyCommand interface {
+	commandType()
+}
+
+type GetBalancePocketMoneyCommand struct {
+	Balance int
+}
+type DepositPocketMoneyCommand struct{}
+type WithdrawPocketMoneyCommand struct{}
+
+func (GetBalancePocketMoneyCommand) commandType() {}
+func (DepositPocketMoneyCommand) commandType()    {}
+func (WithdrawPocketMoneyCommand) commandType()   {}
+
+var pocketMoneyManagerCommandChannel chan PocketMoneyCommand
+
+func pocketMoneyManager() {
+	for cmd := range pocketMoneyManagerCommandChannel {
+		switch v := cmd.(type) {
+		case GetBalancePocketMoneyCommand:
+
+		case DepositPocketMoneyCommand:
+
+		case WithdrawPocketMoneyCommand:
+
+		default:
+			log.Info("unknown command", "command", v)
+
+		}
+
+	}
+
+}
+
 func Run(config *Config) error {
 	log.Info("starting server", "port", config.Port)
 
