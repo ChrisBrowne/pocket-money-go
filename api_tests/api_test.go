@@ -9,9 +9,43 @@ import (
 	"testing"
 )
 
-func TestApi(t *testing.T) {
+func TestApiWithNoChildren(t *testing.T) {
 	var pocketMoneyManagerCommandChannel = make(chan server.PocketMoneyCommand)
-	go server.PocketMoneyManager(pocketMoneyManagerCommandChannel)
+
+	store := server.NewInMemoryChildStore()
+	go server.PocketMoneyManager(pocketMoneyManagerCommandChannel, store)
+
+	server := httptest.NewServer(server.AppHandler(pocketMoneyManagerCommandChannel))
+	defer server.Close()
+
+	resp, err := http.Get(server.URL)
+
+	if err != nil {
+		t.Fatalf("Failed to make request: %v", err)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expexted status code %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+
+	if strings.Contains(string(body), "No children found") == false {
+		t.Errorf("Expected response body to contain 'No children found', got %q", string(body))
+	}
+}
+
+func TestApiWithASingleChild(t *testing.T) {
+	var pocketMoneyManagerCommandChannel = make(chan server.PocketMoneyCommand)
+
+	store := server.NewInMemoryChildStore()
+	store.SetChild(server.Child{Name: "Elizabeth", Balance: 99})
+	go server.PocketMoneyManager(pocketMoneyManagerCommandChannel, store)
 
 	server := httptest.NewServer(server.AppHandler(pocketMoneyManagerCommandChannel))
 	defer server.Close()

@@ -2,6 +2,8 @@ package server
 
 type ChildStore interface {
 	GetAllChildren() []Child
+	GetChild(name string) Child
+	SetChild(child Child)
 }
 
 type InMemoryChildStore struct {
@@ -22,6 +24,11 @@ func (s *InMemoryChildStore) GetAllChildren() []Child {
 	}
 	return children
 }
-func (s *InMemoryChildStore) AddChild(name string) {
-	s.data[name] = Child{Name: name}
+
+func (s *InMemoryChildStore) GetChild(name string) Child {
+	return s.data[name]
+}
+
+func (s *InMemoryChildStore) SetChild(child Child) {
+	s.data[child.Name] = child
 }

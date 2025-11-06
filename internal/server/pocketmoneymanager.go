@@ -33,17 +33,16 @@ func getKids() []Child {
 	return kids
 }
 
-func PocketMoneyManager(commandChan chan PocketMoneyCommand) {
+func PocketMoneyManager(commandChan chan PocketMoneyCommand, store ChildStore) {
 	log.Info("pocketMoneyManager started")
 
 	for cmd := range commandChan {
 		switch v := cmd.(type) {
 		case GetKidsPocketMoneyCommand:
-			kids := getKids()
-			v.Resp <- kids
+			v.Resp <- store.GetAllChildren()
 
 		case GetChildPocketMoneyCommand:
-			v.Resp <- Child{Name: v.Name, Balance: 10.0}
+			v.Resp <- store.GetChild(v.Name)
 
 		case DepositPocketMoneyCommand:
 

@@ -48,15 +48,9 @@ func roothandler(commandChan chan PocketMoneyCommand) func(w http.ResponseWriter
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		respCh := make(chan []Child)
-
 		cmd := GetKidsPocketMoneyCommand{Resp: respCh}
 		commandChan <- cmd
 		res := <-respCh
-
-		names := make([]string, len(res))
-		for i, child := range res {
-			names[i] = child.Name
-		}
 
 		err := t.ExecuteTemplate(w, "index.html", res)
 		if err != nil {
@@ -88,7 +82,11 @@ func Run(config *Config) error {
 	log.Info("starting server", "port", config.Port)
 
 	var pocketMoneyManagerCommandChannel = make(chan PocketMoneyCommand)
-	go PocketMoneyManager(pocketMoneyManagerCommandChannel)
+	store := NewInMemoryChildStore()
+	store.SetChild(Child{Name: "Elizabeth", Balance: 5})
+	store.SetChild(Child{Name: "Matilda", Balance: 4})
+	store.SetChild(Child{Name: "Joseph", Balance: 4})
+	go PocketMoneyManager(pocketMoneyManagerCommandChannel, store)
 
 	handler := AppHandler(pocketMoneyManagerCommandChannel)
 	httpServer := &http.Server{

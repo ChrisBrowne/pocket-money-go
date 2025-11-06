@@ -4,12 +4,20 @@
 <html>
   <head>
     <title>Pocket Money</title>
+    <script
+      src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"
+      integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz"
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   </head>
   <body>
     <h1>Pocket Money</h1>
     <p>save up those pennies</p>
-    {{range .}}
-    <p>{{.Name}}</p>
+    {{if .}} {{range .}}
+    <p>{{.Name}} - {{.Balance}}</p>
+    {{end}} {{else}}
+    <p>No children found</p>
     {{end}}
   </body>
 </html>
