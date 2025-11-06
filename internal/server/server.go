@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 )
 
 var log *slog.Logger
@@ -15,23 +16,35 @@ func init() {
 	log = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 }
 
-func handleSomething(store ChildStore) http.Handler {
-	// thing := prepareThing()
+func handleSomething(commandChan chan PocketMoneyCommand) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			kids := store.GetAllChildren()
-			fmt.Printf("Kids: %s", kids)
-			fmt.Fprintf(w, "Pocket money, golang edition, mooo %s", kids)
+			respCh := make(chan []Child)
+			cmd := GetKidsPocketMoneyCommand{Resp: respCh}
+			commandChan <- cmd
+			res := <-respCh
+			fmt.Printf("Kids: %s", res)
+			fmt.Fprintf(w, "Pocket money, golang edition, mooo %s", res)
 		},
 	)
 }
 
-func roothandler(store ChildStore) func(w http.ResponseWriter, r *http.Request) {
+func roothandler(commandChan chan PocketMoneyCommand) func(w http.ResponseWriter, r *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		kids := store.GetAllChildren()
-		fmt.Printf("Kids: %s", kids)
-		fmt.Fprintf(w, "Pocket money, golang edition, mooo %s", "elizabeth")
+		respCh := make(chan []Child)
+
+		cmd := GetKidsPocketMoneyCommand{Resp: respCh}
+		commandChan <- cmd
+		res := <-respCh
+
+		names := make([]string, len(res))
+		for i, child := range res {
+			names[i] = child.Name
+		}
+		all := strings.Join(names, ", ")
+
+		fmt.Fprintf(w, "Pocket money, golang edition, mooo %s", all)
 	}
 }
 
@@ -39,90 +52,27 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "pong")
 }
 
-func addRoutes(mux *http.ServeMux, store ChildStore) {
+func addRoutes(mux *http.ServeMux, commandChan chan PocketMoneyCommand) {
 	mux.HandleFunc("/ping", pingHandler)
-	mux.HandleFunc("/", roothandler(store))
-	mux.HandleFunc("/some", handleSomething(store).ServeHTTP)
+	mux.HandleFunc("/", roothandler(commandChan))
+	mux.HandleFunc("/some", handleSomething(commandChan).ServeHTTP)
 }
 
-type Child struct {
-	Name string
-}
-
-type ChildStore interface {
-	GetAllChildren() []Child
-}
-
-type InMemoryChildStore struct {
-	data map[string]Child
-}
-
-func NewInMemoryChildStore() *InMemoryChildStore {
-	return &InMemoryChildStore{
-		data: make(map[string]Child),
-	}
-}
-
-func (s *InMemoryChildStore) GetAllChildren() []Child {
-	children := make([]Child, 0, len(s.data))
-
-	for _, v := range s.data {
-		children = append(children, v)
-	}
-	return children
-}
-func (s *InMemoryChildStore) AddChild(name string) {
-	s.data[name] = Child{Name: name}
-}
-
-func AppHandler(childStore ChildStore) http.Handler {
+func AppHandler(commandChan chan PocketMoneyCommand) http.Handler {
 	mux := http.NewServeMux()
-	addRoutes(mux, childStore)
+	addRoutes(mux, commandChan)
 
 	var handler http.Handler = mux
 	return handler
 }
 
-type PocketMoneyCommand interface {
-	commandType()
-}
-
-type GetBalancePocketMoneyCommand struct {
-	Balance int
-}
-type DepositPocketMoneyCommand struct{}
-type WithdrawPocketMoneyCommand struct{}
-
-func (GetBalancePocketMoneyCommand) commandType() {}
-func (DepositPocketMoneyCommand) commandType()    {}
-func (WithdrawPocketMoneyCommand) commandType()   {}
-
-var pocketMoneyManagerCommandChannel chan PocketMoneyCommand
-
-func pocketMoneyManager() {
-	for cmd := range pocketMoneyManagerCommandChannel {
-		switch v := cmd.(type) {
-		case GetBalancePocketMoneyCommand:
-
-		case DepositPocketMoneyCommand:
-
-		case WithdrawPocketMoneyCommand:
-
-		default:
-			log.Info("unknown command", "command", v)
-
-		}
-
-	}
-
-}
-
 func Run(config *Config) error {
 	log.Info("starting server", "port", config.Port)
 
-	store := NewInMemoryChildStore()
-	store.AddChild("elizabeth")
-	handler := AppHandler(store)
+	var pocketMoneyManagerCommandChannel = make(chan PocketMoneyCommand)
+	go pocketMoneyManager(pocketMoneyManagerCommandChannel)
+
+	handler := AppHandler(pocketMoneyManagerCommandChannel)
 	httpServer := &http.Server{
 		Addr:    net.JoinHostPort("localhost", strconv.Itoa(config.Port)),
 		Handler: handler,
