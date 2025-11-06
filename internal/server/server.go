@@ -1,19 +1,34 @@
 package server
 
 import (
+	"embed"
 	"fmt"
+	"html/template"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 )
+
+//go:embed templates/*.html
+var templateFS embed.FS
+
+var t *template.Template
 
 var log *slog.Logger
 
 func init() {
 	log = slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	log.Info("loadingTemplates")
+	var err error
+	t, err = template.ParseFS(templateFS, "templates/index.html")
+
+	if err != nil {
+		log.Error("could not read templates")
+		os.Exit(1)
+	}
 }
 
 func handleSomething(commandChan chan PocketMoneyCommand) http.Handler {
@@ -23,8 +38,8 @@ func handleSomething(commandChan chan PocketMoneyCommand) http.Handler {
 			cmd := GetKidsPocketMoneyCommand{Resp: respCh}
 			commandChan <- cmd
 			res := <-respCh
-			fmt.Printf("Kids: %s", res)
-			fmt.Fprintf(w, "Pocket money, golang edition, mooo %s", res)
+			fmt.Printf("Kids: %s", strconv.Itoa(len(res)))
+			fmt.Fprintf(w, "Pocket money, golang edition, kid count %s", strconv.Itoa(len(res)))
 		},
 	)
 }
@@ -42,9 +57,11 @@ func roothandler(commandChan chan PocketMoneyCommand) func(w http.ResponseWriter
 		for i, child := range res {
 			names[i] = child.Name
 		}
-		all := strings.Join(names, ", ")
 
-		fmt.Fprintf(w, "Pocket money, golang edition, mooo %s", all)
+		err := t.ExecuteTemplate(w, "index.html", res)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}
 }
 
@@ -67,10 +84,11 @@ func AppHandler(commandChan chan PocketMoneyCommand) http.Handler {
 }
 
 func Run(config *Config) error {
+
 	log.Info("starting server", "port", config.Port)
 
 	var pocketMoneyManagerCommandChannel = make(chan PocketMoneyCommand)
-	go pocketMoneyManager(pocketMoneyManagerCommandChannel)
+	go PocketMoneyManager(pocketMoneyManagerCommandChannel)
 
 	handler := AppHandler(pocketMoneyManagerCommandChannel)
 	httpServer := &http.Server{

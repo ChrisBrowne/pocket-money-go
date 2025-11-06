@@ -10,10 +10,10 @@ import (
 )
 
 func TestApi(t *testing.T) {
-	store := server.NewInMemoryChildStore()
-	store.AddChild("elizabeth")
+	var pocketMoneyManagerCommandChannel = make(chan server.PocketMoneyCommand)
+	go server.PocketMoneyManager(pocketMoneyManagerCommandChannel)
 
-	server := httptest.NewServer(server.AppHandler(store))
+	server := httptest.NewServer(server.AppHandler(pocketMoneyManagerCommandChannel))
 	defer server.Close()
 
 	resp, err := http.Get(server.URL)
@@ -33,7 +33,7 @@ func TestApi(t *testing.T) {
 		t.Errorf("Expexted status code %d, got %d", http.StatusOK, resp.StatusCode)
 	}
 
-	if strings.Contains(string(body), "elizabeth") == false {
+	if strings.Contains(string(body), "Elizabeth") == false {
 		t.Errorf("Expected response body to contain 'elizabeth', got %q", string(body))
 	}
 }

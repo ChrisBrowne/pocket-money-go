@@ -1,0 +1,16 @@
+{{define "index.html"}}
+
+<!doctype html>
+<html>
+  <head>
+    <title>Pocket Money</title>
+  </head>
+  <body>
+    <h1>Pocket Money</h1>
+    <p>save up those pennies</p>
+    {{range .}}
+    <p>{{.Name}}</p>
+    {{end}}
+  </body>
+</html>
+{{end}}

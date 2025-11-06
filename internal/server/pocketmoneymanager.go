@@ -33,7 +33,7 @@ func getKids() []Child {
 	return kids
 }
 
-func pocketMoneyManager(commandChan chan PocketMoneyCommand) {
+func PocketMoneyManager(commandChan chan PocketMoneyCommand) {
 	log.Info("pocketMoneyManager started")
 
 	for cmd := range commandChan {
